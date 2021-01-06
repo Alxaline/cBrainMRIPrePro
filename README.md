@@ -30,7 +30,7 @@ pip install -e .
 
 ## How to use it
 
-The pipe Class is describe in the [documentation](html/cBrainMRIPrePro/pipe.html)
+The pipe Class is describe in the [documentation](docs/cBrainMRIPrePro/pipe.html)
 
 Using CBrainMRIPrePro is straightforward. The following examples show how to perform: 
 - Bias field correction

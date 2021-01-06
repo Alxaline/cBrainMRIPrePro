@@ -21,7 +21,7 @@ args = dict(
     author_email='alexandre.carre@gustaveroussy.fr',
     url='https://github.com/Alxaline/cBrainMRIPrePro',
     license=license,
-    packages=find_packages(include=['cBrainMRIPrePro']),
+    packages=find_packages(excludes=['docs']),
     python_requires='>=3.6',
     keywords="brain Conventional mri preprocessing",
 )

@@ -22,6 +22,9 @@ args = dict(
     url='https://github.com/Alxaline/cBrainMRIPrePro',
     license=license,
     packages=find_packages(exclude=['docs']),
+    package_data={
+        'cBrainMRIPrePrePro.utils.Atlas_SRI': ['*.nii.gz'],  # add template
+    },
     python_requires='>=3.6',
     keywords="brain Conventional mri preprocessing",
 )

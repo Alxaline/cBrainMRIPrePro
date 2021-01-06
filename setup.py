@@ -26,12 +26,12 @@ args = dict(
     keywords="brain Conventional mri preprocessing",
 )
 
-setup(install_requires=['torch'
+setup(install_requires=['torch',
                         'simpleitk',
                         'scikit-image',
                         'numba',
-                        'argparse'
-                        'pdoc3'
+                        'argparse',
+                        'pdoc3',
                         'antspyx @ git+https://github.com/ANTsX/ANTsPy.git@v0.2.6#egg=antspyx',
-                        'HD-BET @ git+https://github.com/MIC-DKFZ/HD-BET.git#egg=HD-BET'
+                        'HD-BET @ git+https://github.com/MIC-DKFZ/HD-BET.git#egg=HD-BET',
                         ], **args)

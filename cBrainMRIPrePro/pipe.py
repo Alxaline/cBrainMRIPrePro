@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from HD_BET.run import run_hd_bet
 
+from cBrainMRIPrePro import utils
 from .utils.files import safe_file_name, split_filename, load_nifty_volume_as_array, save_to_nii
 from .utils.image_processing import min_max_scaling, invert_min_max_scaling, get_head_mask, zscore_normalize
 
@@ -43,6 +44,25 @@ class DataPreprocessing(ABC):
                              4 (BSpline), default: 4
         n4_correction: bias field correction. Specified as list corresponding to keys of dict_image
         do_coregistration: set to True to coregister the data
+        type_of_transform: type of transform for registration. Default "Affine"
+        Can be of type:
+                        - "Translation": Translation transformation.
+                        - "Rigid": Rigid transformation: Only rotation and translation.
+                        - "Similarity": Similarity transformation: scaling, rotation and translation.
+                        - "QuickRigid": Rigid transformation: Only rotation and translation.
+                        May be useful for quick visualization fixes.'
+                        - "DenseRigid": Rigid transformation: Only rotation and translation.
+                        Employs dense sampling during metric estimation.'
+                        - "BOLDRigid": Rigid transformation: Parameters typical for BOLD to
+                        BOLD intrasubject registration'.'
+                        - "Affine": Affine transformation: Rigid + scaling.
+                        - "AffineFast": Fast version of Affine.
+                        - "BOLDAffine": Affine transformation: Parameters typical for BOLD to
+                        BOLD intrasubject registration'.'
+                        - "TRSAA": translation, rigid, similarity, affine (twice). please set
+                    regIterations if using this option. this would be used in
+                    cases where you want a really high quality affine mapping
+                    (perhaps with mask).
         template: set to true to register the data in template space
         inter_type_apply_transform_registration: choice of interpolator for apply affine transform of registration
         0 (Linear), 1 (NearestNeighbor), 2 (MultiLabel), 3 (Gaussian), 4 (BSpline), 4 (CosineWindowedSinc),
@@ -72,6 +92,7 @@ class DataPreprocessing(ABC):
                  inter_type_resample: int = 4,
                  n4_correction: Optional[List] = None,
                  do_coregistration: bool = True,
+                 type_of_transform: str = "Affine",
                  template: bool = True,
                  inter_type_apply_transform_registration: int = 4,
                  do_ss: bool = True,
@@ -94,6 +115,7 @@ class DataPreprocessing(ABC):
         self.n4_correction = n4_correction
         self.template = template
         self.do_coregistration = do_coregistration
+        self.type_of_transform = type_of_transform
         self.do_ss = do_ss
         self.normalize_z_score = normalize_z_score
         self.scaling_factor_z_score = scaling_factor_z_score
@@ -106,6 +128,9 @@ class DataPreprocessing(ABC):
                                                                 3: "gaussian", 4: "bSpline", 5: "cosineWindowedSinc",
                                                                 6: "welchWindowedSinc", 7: "hammingWindowedSinc",
                                                                 8: "lanczosWindowedSinc", 9: "genericLabel"}
+
+        self.default_type_of_transform = ["Translation", "Rigid", "Similarity", "QuickRigid", "DenseRigid", "BOLDRigid",
+                                          "Affine", "AffineFast", "BOLDAffine", "TRSAA"]
 
         assert len(self.reference) == 1, "Reference must be unique and contains a key representing modality and " \
                                          "a value corresponding to the path"
@@ -128,6 +153,9 @@ class DataPreprocessing(ABC):
             f"{self.default_inter_type_apply_transform_registration}"
         self.inter_type_apply_transform_registration = self.default_inter_type_apply_transform_registration[
             self.inter_type_apply_transform_registration]
+
+        assert self.type_of_transform in self.default_type_of_transform, f"type_of_transform must be in:" \
+                                                                         f" {self.default_type_of_transform}"
 
         if do_ss:
             assert do_coregistration, "if do_ss is set to True, do_coregistration need to be set to true to have a " \

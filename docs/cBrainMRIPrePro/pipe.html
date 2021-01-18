@@ -39,6 +39,7 @@ import numpy as np
 import torch
 from HD_BET.run import run_hd_bet
 
+from cBrainMRIPrePro import utils
 from .utils.files import safe_file_name, split_filename, load_nifty_volume_as_array, save_to_nii
 from .utils.image_processing import min_max_scaling, invert_min_max_scaling, get_head_mask, zscore_normalize
 
@@ -71,6 +72,25 @@ class DataPreprocessing(ABC):
                              4 (BSpline), default: 4
         n4_correction: bias field correction. Specified as list corresponding to keys of dict_image
         do_coregistration: set to True to coregister the data
+        type_of_transform: type of transform for registration. Default &#34;Affine&#34;
+        Can be of type:
+                        - &#34;Translation&#34;: Translation transformation.
+                        - &#34;Rigid&#34;: Rigid transformation: Only rotation and translation.
+                        - &#34;Similarity&#34;: Similarity transformation: scaling, rotation and translation.
+                        - &#34;QuickRigid&#34;: Rigid transformation: Only rotation and translation.
+                        May be useful for quick visualization fixes.&#39;
+                        - &#34;DenseRigid&#34;: Rigid transformation: Only rotation and translation.
+                        Employs dense sampling during metric estimation.&#39;
+                        - &#34;BOLDRigid&#34;: Rigid transformation: Parameters typical for BOLD to
+                        BOLD intrasubject registration&#39;.&#39;
+                        - &#34;Affine&#34;: Affine transformation: Rigid + scaling.
+                        - &#34;AffineFast&#34;: Fast version of Affine.
+                        - &#34;BOLDAffine&#34;: Affine transformation: Parameters typical for BOLD to
+                        BOLD intrasubject registration&#39;.&#39;
+                        - &#34;TRSAA&#34;: translation, rigid, similarity, affine (twice). please set
+                    regIterations if using this option. this would be used in
+                    cases where you want a really high quality affine mapping
+                    (perhaps with mask).
         template: set to true to register the data in template space
         inter_type_apply_transform_registration: choice of interpolator for apply affine transform of registration
         0 (Linear), 1 (NearestNeighbor), 2 (MultiLabel), 3 (Gaussian), 4 (BSpline), 4 (CosineWindowedSinc),
@@ -100,6 +120,7 @@ class DataPreprocessing(ABC):
                  inter_type_resample: int = 4,
                  n4_correction: Optional[List] = None,
                  do_coregistration: bool = True,
+                 type_of_transform: str = &#34;Affine&#34;,
                  template: bool = True,
                  inter_type_apply_transform_registration: int = 4,
                  do_ss: bool = True,
@@ -122,6 +143,7 @@ class DataPreprocessing(ABC):
         self.n4_correction = n4_correction
         self.template = template
         self.do_coregistration = do_coregistration
+        self.type_of_transform = type_of_transform
         self.do_ss = do_ss
         self.normalize_z_score = normalize_z_score
         self.scaling_factor_z_score = scaling_factor_z_score
@@ -134,6 +156,9 @@ class DataPreprocessing(ABC):
                                                                 3: &#34;gaussian&#34;, 4: &#34;bSpline&#34;, 5: &#34;cosineWindowedSinc&#34;,
                                                                 6: &#34;welchWindowedSinc&#34;, 7: &#34;hammingWindowedSinc&#34;,
                                                                 8: &#34;lanczosWindowedSinc&#34;, 9: &#34;genericLabel&#34;}
+
+        self.default_type_of_transform = [&#34;Translation&#34;, &#34;Rigid&#34;, &#34;Similarity&#34;, &#34;QuickRigid&#34;, &#34;DenseRigid&#34;, &#34;BOLDRigid&#34;,
+                                          &#34;Affine&#34;, &#34;AffineFast&#34;, &#34;BOLDAffine&#34;, &#34;TRSAA&#34;]
 
         assert len(self.reference) == 1, &#34;Reference must be unique and contains a key representing modality and &#34; \
                                          &#34;a value corresponding to the path&#34;
@@ -156,6 +181,9 @@ class DataPreprocessing(ABC):
             f&#34;{self.default_inter_type_apply_transform_registration}&#34;
         self.inter_type_apply_transform_registration = self.default_inter_type_apply_transform_registration[
             self.inter_type_apply_transform_registration]
+
+        assert self.type_of_transform in self.default_type_of_transform, f&#34;type_of_transform must be in:&#34; \
+                                                                         f&#34; {self.default_type_of_transform}&#34;
 
         if do_ss:
             assert do_coregistration, &#34;if do_ss is set to True, do_coregistration need to be set to true to have a &#34; \
@@ -531,7 +559,7 @@ if __name__ == &#34;__main__&#34;:
 <dl>
 <dt id="cBrainMRIPrePro.pipe.DataPreprocessing"><code class="flex name class">
 <span>class <span class="ident">DataPreprocessing</span></span>
-<span>(</span><span>dict_image: Dict[str, str], reference: Dict[str, str], output_folder: str, resample_spacing: Union[Tuple[int, int, int], NoneType] = None, inter_type_resample: int = 4, n4_correction: Union[List, NoneType] = None, do_coregistration: bool = True, template: bool = True, inter_type_apply_transform_registration: int = 4, do_ss: bool = True, normalize_z_score: Union[List, NoneType] = None, scaling_factor_z_score: int = 1, device: str = '0', overwrite: bool = False, save_step: Union[Tuple[str], List[str]] = ('resample', 'n4_correction', 'coregistration', 'affine_transform', 'skullstripping', 'normalize'))</span>
+<span>(</span><span>dict_image: Dict[str, str], reference: Dict[str, str], output_folder: str, resample_spacing: Union[Tuple[int, int, int], NoneType] = None, inter_type_resample: int = 4, n4_correction: Union[List, NoneType] = None, do_coregistration: bool = True, type_of_transform: str = 'Affine', template: bool = True, inter_type_apply_transform_registration: int = 4, do_ss: bool = True, normalize_z_score: Union[List, NoneType] = None, scaling_factor_z_score: int = 1, device: str = '0', overwrite: bool = False, save_step: Union[Tuple[str], List[str]] = ('resample', 'n4_correction', 'coregistration', 'affine_transform', 'skullstripping', 'normalize'))</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Class for data cBrainMRIPrePro input modalities as a dict:
@@ -565,6 +593,26 @@ no cBrainMRIPrePro step is applied, except for coregistration.</dd>
 <dd>bias field correction. Specified as list corresponding to keys of dict_image</dd>
 <dt><strong><code>do_coregistration</code></strong></dt>
 <dd>set to True to coregister the data</dd>
+<dt><strong><code>type_of_transform</code></strong></dt>
+<dd>type of transform for registration. Default "Affine"</dd>
+<dt>Can be of type:</dt>
+<dt>- "Translation": Translation transformation.</dt>
+<dt>- "Rigid": Rigid transformation: Only rotation and translation.</dt>
+<dt>- "Similarity": Similarity transformation: scaling, rotation and translation.</dt>
+<dt>- "QuickRigid": Rigid transformation: Only rotation and translation.</dt>
+<dt>May be useful for quick visualization fixes.'</dt>
+<dt>- "DenseRigid": Rigid transformation: Only rotation and translation.</dt>
+<dt>Employs dense sampling during metric estimation.'</dt>
+<dt>- "BOLDRigid": Rigid transformation: Parameters typical for BOLD to</dt>
+<dt>BOLD intrasubject registration'.'</dt>
+<dt>- "Affine": Affine transformation: Rigid + scaling.</dt>
+<dt>- "AffineFast": Fast version of Affine.</dt>
+<dt>- "BOLDAffine": Affine transformation: Parameters typical for BOLD to</dt>
+<dt>BOLD intrasubject registration'.'</dt>
+<dt>- "TRSAA": translation, rigid, similarity, affine (twice). please set</dt>
+<dt>regIterations if using this option. this would be used in</dt>
+<dt>cases where you want a really high quality affine mapping</dt>
+<dt>(perhaps with mask).</dt>
 <dt><strong><code>template</code></strong></dt>
 <dd>set to true to register the data in template space</dd>
 <dt><strong><code>inter_type_apply_transform_registration</code></strong></dt>
@@ -623,6 +671,25 @@ do_coregistration need to be set to True to have a reference</dd>
                              4 (BSpline), default: 4
         n4_correction: bias field correction. Specified as list corresponding to keys of dict_image
         do_coregistration: set to True to coregister the data
+        type_of_transform: type of transform for registration. Default &#34;Affine&#34;
+        Can be of type:
+                        - &#34;Translation&#34;: Translation transformation.
+                        - &#34;Rigid&#34;: Rigid transformation: Only rotation and translation.
+                        - &#34;Similarity&#34;: Similarity transformation: scaling, rotation and translation.
+                        - &#34;QuickRigid&#34;: Rigid transformation: Only rotation and translation.
+                        May be useful for quick visualization fixes.&#39;
+                        - &#34;DenseRigid&#34;: Rigid transformation: Only rotation and translation.
+                        Employs dense sampling during metric estimation.&#39;
+                        - &#34;BOLDRigid&#34;: Rigid transformation: Parameters typical for BOLD to
+                        BOLD intrasubject registration&#39;.&#39;
+                        - &#34;Affine&#34;: Affine transformation: Rigid + scaling.
+                        - &#34;AffineFast&#34;: Fast version of Affine.
+                        - &#34;BOLDAffine&#34;: Affine transformation: Parameters typical for BOLD to
+                        BOLD intrasubject registration&#39;.&#39;
+                        - &#34;TRSAA&#34;: translation, rigid, similarity, affine (twice). please set
+                    regIterations if using this option. this would be used in
+                    cases where you want a really high quality affine mapping
+                    (perhaps with mask).
         template: set to true to register the data in template space
         inter_type_apply_transform_registration: choice of interpolator for apply affine transform of registration
         0 (Linear), 1 (NearestNeighbor), 2 (MultiLabel), 3 (Gaussian), 4 (BSpline), 4 (CosineWindowedSinc),
@@ -652,6 +719,7 @@ do_coregistration need to be set to True to have a reference</dd>
                  inter_type_resample: int = 4,
                  n4_correction: Optional[List] = None,
                  do_coregistration: bool = True,
+                 type_of_transform: str = &#34;Affine&#34;,
                  template: bool = True,
                  inter_type_apply_transform_registration: int = 4,
                  do_ss: bool = True,
@@ -674,6 +742,7 @@ do_coregistration need to be set to True to have a reference</dd>
         self.n4_correction = n4_correction
         self.template = template
         self.do_coregistration = do_coregistration
+        self.type_of_transform = type_of_transform
         self.do_ss = do_ss
         self.normalize_z_score = normalize_z_score
         self.scaling_factor_z_score = scaling_factor_z_score
@@ -686,6 +755,9 @@ do_coregistration need to be set to True to have a reference</dd>
                                                                 3: &#34;gaussian&#34;, 4: &#34;bSpline&#34;, 5: &#34;cosineWindowedSinc&#34;,
                                                                 6: &#34;welchWindowedSinc&#34;, 7: &#34;hammingWindowedSinc&#34;,
                                                                 8: &#34;lanczosWindowedSinc&#34;, 9: &#34;genericLabel&#34;}
+
+        self.default_type_of_transform = [&#34;Translation&#34;, &#34;Rigid&#34;, &#34;Similarity&#34;, &#34;QuickRigid&#34;, &#34;DenseRigid&#34;, &#34;BOLDRigid&#34;,
+                                          &#34;Affine&#34;, &#34;AffineFast&#34;, &#34;BOLDAffine&#34;, &#34;TRSAA&#34;]
 
         assert len(self.reference) == 1, &#34;Reference must be unique and contains a key representing modality and &#34; \
                                          &#34;a value corresponding to the path&#34;
@@ -708,6 +780,9 @@ do_coregistration need to be set to True to have a reference</dd>
             f&#34;{self.default_inter_type_apply_transform_registration}&#34;
         self.inter_type_apply_transform_registration = self.default_inter_type_apply_transform_registration[
             self.inter_type_apply_transform_registration]
+
+        assert self.type_of_transform in self.default_type_of_transform, f&#34;type_of_transform must be in:&#34; \
+                                                                         f&#34; {self.default_type_of_transform}&#34;
 
         if do_ss:
             assert do_coregistration, &#34;if do_ss is set to True, do_coregistration need to be set to true to have a &#34; \

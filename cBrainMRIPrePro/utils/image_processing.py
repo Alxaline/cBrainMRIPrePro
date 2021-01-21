@@ -53,9 +53,9 @@ def fill_mask(mask_arr: np.ndarray) -> np.ndarray:
     return mask_arr
 
 
-def get_head_mask(input_array: np.ndarray) -> np.ndarray:
+def get_mask(input_array: np.ndarray) -> np.ndarray:
     """
-    Get a head mask. Based on Otsu threshold and noise reduced. Then result mask is holes filled.
+    Get a (head) mask. Based on Otsu threshold and noise reduced. Then result mask is holes filled.
     :param input_array: input image array
     :return: binary head mask
     """

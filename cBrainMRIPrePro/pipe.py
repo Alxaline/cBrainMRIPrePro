@@ -13,7 +13,7 @@ from HD_BET.run import run_hd_bet
 
 from cBrainMRIPrePro import utils
 from .utils.files import safe_file_name, split_filename, load_nifty_volume_as_array, save_to_nii
-from .utils.image_processing import min_max_scaling, invert_min_max_scaling, get_head_mask, zscore_normalize
+from .utils.image_processing import min_max_scaling, invert_min_max_scaling, get_mask, zscore_normalize
 
 logger = logging.getLogger(__name__)
 
@@ -266,7 +266,7 @@ class DataPreprocessing(ABC):
             # In ANTsPy when no mask is supplied, a mask is computed with the get_mask function. Function is based
             # on a mean threshold. Resulting head mask is very often filled with holes. Here we compute a real head
             # mask with no holes.
-            head_mask = get_head_mask(img_array)
+            head_mask = get_mask(img_array)
             head_mask = img.new_image_like(head_mask).astype("float32")  # pass to float32 to be read by n4 function
             img_n4 = ants.n4_bias_field_correction(image=img, mask=head_mask, verbose=False)  # 2
             img_array_n4 = img_n4.numpy()

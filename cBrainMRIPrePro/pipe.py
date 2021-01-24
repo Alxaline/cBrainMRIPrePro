@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+| Author: Alexandre CARRE (alexandre.carre@gustaveroussy.fr)
+| Created on: Nov 23, 2020
+"""
 import copy
 import logging
 import os
@@ -21,67 +26,67 @@ logger = logging.getLogger(__name__)
 class DataPreprocessing(ABC):
     """
     Class for data cBrainMRIPrePro input modalities as a dict:
-        - Bias field correction of modalities (n4_correction args) (optional)
-        - resampling (optional)
+
+        - Bias field correction of modalities (n4_correction args) (optional).
+        - resampling (optional).
         - Co-registration: If template is set to True. Register to reference to template and then register other
-                           modalities to reference.
-                           If template is set to False. Register to reference
-        - Skull-stripped the reference modalities and apply the mask on others modalities
-        - Normalization Z-Score (optional)
-    Template is the SRI24 LPS atlas (as used in BraTS challenge)
-    It will add the suffix of the keys to data of each step. so if your keys is "T2" and values "/path/data_t1.nii.gz"
-    it will split the values and look at the last suffix "t1", so will be data_step_t1_T2.nii.gz
-    it will ignore case sensitivity, so if keys is "T1" and values "/path/data_t1.nii.gz", the step will be
-    data_step_t1.nii.gz
+          modalities to reference. If template is set to False. Register to reference.
+        - Skull-stripped the reference modalities and apply the mask on others modalities.
+        - Normalization Z-Score (optional).
+
+    .. note:: Template is the SRI24 LPS atlas (as used in BraTS challenge).
+        It will add the suffix of the keys to data of each step. so if your keys is "T2" and values "/path/data_t1.nii.gz"
+        it will split the values and look at the last suffix "t1", so will be data_step_t1_T2.nii.gz
+        it will ignore case sensitivity, so if keys is "T1" and values "/path/data_t1.nii.gz", the step will be
+        data_step_t1.nii.gz
 
     Args:
         dict_image: keys is the corresponding modality and value is path, ie {"T1": "t1_path", "T2": "t2_path"} ..
         reference: reference modality (used for co-registration and ss). if reference is not in dict_image,
-                   no cBrainMRIPrePro step is applied, except for coregistration.
+            no cBrainMRIPrePro step is applied, except for coregistration.
         output_folder: output directory were to save cBrainMRIPrePro data
         resample_spacing: resolution for resampling (ie (1, 1, 1) in mm
         inter_type_resample: mode for resample 0 (Linear), 1 (NearestNeighbor), 2 (Gaussian), 3 (WindowedSinc),
-                             4 (BSpline), default: 4
+            4 (BSpline), default: 4
         n4_correction: bias field correction. Specified as list corresponding to keys of dict_image
-        do_coregistration: set to True to coregister the data
-        type_of_transform: type of transform for registration. Default "Affine"
-        Can be of type:
-                        - "Translation": Translation transformation.
-                        - "Rigid": Rigid transformation: Only rotation and translation.
-                        - "Similarity": Similarity transformation: scaling, rotation and translation.
-                        - "QuickRigid": Rigid transformation: Only rotation and translation.
-                        May be useful for quick visualization fixes.'
-                        - "DenseRigid": Rigid transformation: Only rotation and translation.
-                        Employs dense sampling during metric estimation.'
-                        - "BOLDRigid": Rigid transformation: Parameters typical for BOLD to
-                        BOLD intrasubject registration'.'
-                        - "Affine": Affine transformation: Rigid + scaling.
-                        - "AffineFast": Fast version of Affine.
-                        - "BOLDAffine": Affine transformation: Parameters typical for BOLD to
-                        BOLD intrasubject registration'.'
-                        - "TRSAA": translation, rigid, similarity, affine (twice). please set
-                    regIterations if using this option. this would be used in
-                    cases where you want a really high quality affine mapping
-                    (perhaps with mask).
+        do_coregistration: set to True to coregister the data.
+        type_of_transform: type of transform for registration. (default: "Affine"). Can be of type:
+
+            - "Translation": Translation transformation.
+            - "Rigid": Rigid transformation: Only rotation and translation.
+            - "Similarity": Similarity transformation: scaling, rotation and translation.
+            - "QuickRigid": Rigid transformation: Only rotation and translation.
+              May be useful for quick visualization fixes.
+            - "DenseRigid": Rigid transformation: Only rotation and translation.
+              Employs dense sampling during metric estimation.
+            - "BOLDRigid": Rigid transformation: Parameters typical for BOLD to
+              BOLD intrasubject registration.
+            - "Affine": Affine transformation: Rigid + scaling.
+            - "AffineFast": Fast version of Affine.
+            - "BOLDAffine": Affine transformation: Parameters typical for BOLD to
+              BOLD intrasubject registration.
+            - "TRSAA": translation, rigid, similarity, affine (twice).
+
         template: set to true to register the data in template space
         inter_type_apply_transform_registration: choice of interpolator for apply affine transform of registration
-        0 (Linear), 1 (NearestNeighbor), 2 (MultiLabel), 3 (Gaussian), 4 (BSpline), 4 (CosineWindowedSinc),
-        6 (WelchWindowedSinc), 7 (HammingWindowedSinc), 8 (LanczosWindowedSinc), 9 (GenericLabel) default: 4
+            0 (Linear), 1 (NearestNeighbor), 2 (MultiLabel), 3 (Gaussian), 4 (BSpline), 4 (CosineWindowedSinc),
+            6 (WelchWindowedSinc), 7 (HammingWindowedSinc), 8 (LanczosWindowedSinc), 9 (GenericLabel) default: 4.
         do_ss: use HD-BET to skull-strip the reference and apply mask on other modalities.
-               do_coregistration need to be set to True to have a reference
+            do_coregistration need to be set to True to have a reference
         normalize_z_score: normalize skull-stripped image by substraction the mean of the whole brain
-                           (considers non zero) and dividing by the standard deviation
+            (considers non zero) and dividing by the standard deviation
         scaling_factor_z_score: scaling factor to apply to normalization (default: 1)
         device: device to run HD-BT (default GPU: "0"), you can use "cpu".
         overwrite: if a step file already exist. will overwrite it. (default False)
         save_step: specify the step that you want to save : ("resample", "n4_correction", "coregistration",
-                                                            "affine_transform", "skullstripping", "normalize")
-                   'resample: save the resampling image'
-                   'n4: save bias field correction with already applied previous step'
-                   'coregistration: save coregistered image with already applied previous step'
-                   'affine: save affine transform of registration'
-                   'mask: save brain mask resulting of ss of reference'
-                   'ss: save all skull-stripped image'
+            "affine_transform", "skullstripping", "normalize")
+
+                - resample: save the resampling image'
+                - n4_correction: save bias field correction with already applied previous step
+                - coregistration: save coregistered image with already applied previous step
+                - affine_transform: save affine transform of registration
+                - mask: save brain mask resulting of ss of reference
+                - ss: save all skull-stripped image
     """
 
     def __init__(self,
@@ -198,6 +203,7 @@ class DataPreprocessing(ABC):
     def check_output_filename(filename: str, modality: str, step: str) -> str:
         """
         check output filename. if mod is already in filename will not add it
+
         :param filename: filename
         :param modality: modality
         :param step: cBrainMRIPrePro step
@@ -417,7 +423,13 @@ class DataPreprocessing(ABC):
     @staticmethod
     def apply_brain_mask(input_file_path: str, mask: Union[str, np.ndarray]) \
             -> Tuple[np.ndarray, Tuple[Tuple, Tuple, Tuple]]:
+        """
+        Apply brain mask on head image
 
+        :param input_file_path: input file path
+        :param mask: input brain mask file path or array-like
+        :return: array, header
+        """
         mask_array = mask
         if isinstance(mask, str):
             mask_array, _ = load_nifty_volume_as_array(input_path_file=mask)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Author: Alexandre CARRE (alexandre.carre@gustaveroussy.fr)
-Created on: Nov 23, 2020
+| Author: Alexandre CARRE (alexandre.carre@gustaveroussy.fr)
+| Created on: Nov 23, 2020
 """
 import logging
 from typing import Tuple
@@ -19,6 +19,7 @@ logging.getLogger('numba').setLevel(logging.WARNING)
 def fill_mask(mask_arr: np.ndarray) -> np.ndarray:
     """
     Fill a 3D mask array. Useful when use a threshold function and need to fill hole
+
     :param mask_arr: mask to fill
     :return: mask filled
     """
@@ -56,6 +57,7 @@ def fill_mask(mask_arr: np.ndarray) -> np.ndarray:
 def get_mask(input_array: np.ndarray) -> np.ndarray:
     """
     Get a (head) mask. Based on Otsu threshold and noise reduced. Then result mask is holes filled.
+
     :param input_array: input image array
     :return: binary head mask
     """
@@ -70,9 +72,10 @@ def min_max_scaling(input_array: np.ndarray, scaling_range: Tuple[int, int] = (1
         -> Tuple[np.ndarray, float, float]:
     """
     Transform image input pixels/voxels to a given range. (type min-max scaler)
+
     :param input_array: input image array
     :param scaling_range: min, max = feature_range
-    :return: image_scaled, min_, scale_
+    :return: image_scaled, min, scale
     """
     image_scaled = np.copy(input_array).astype(np.float32)
     min_ = (scaling_range[0] - np.min(input_array)).astype(np.float32)
@@ -85,6 +88,7 @@ def min_max_scaling(input_array: np.ndarray, scaling_range: Tuple[int, int] = (1
 def invert_min_max_scaling(input_array_scaled: np.ndarray, scale_: float, min_: float) -> np.ndarray:
     """
     Invert min max scaling
+
     :param input_array_scaled: input image array scaled
     :param scale_: Per pixels/voxels relative scaling of the data.
     :param min_: Per pixels/voxels minimum seen in the data
@@ -99,6 +103,7 @@ def zscore_normalize(input_array: np.ndarray, scaling_factor: int = 1, mask: np.
     """
     Function to normalize array with Z-Score. Normalize a target image by subtracting the mean of the whole brain
     and dividing by the standard deviation.
+
     :param input_array: input array image to normalize
     :param scaling_factor: scaling factor to apply to normalization
     :param mask: input mask where to apply the normalization. If not provided default will be in non zero value

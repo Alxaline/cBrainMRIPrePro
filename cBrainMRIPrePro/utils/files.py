@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Author: Alexandre CARRE (alexandre.carre@gustaveroussy.fr)
-Created on: Nov 23, 2020
+| Author: Alexandre CARRE (alexandre.carre@gustaveroussy.fr)
+| Created on: Nov 23, 2020
 """
 import logging
 import os
@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 def check_isdir(input_dir: str) -> str:
     """
     Check if a directory exist.
+
     :param input_dir: string of the path of the input directory.
     :return: string if exist, else raise NotADirectoryError.
     """
@@ -28,6 +29,7 @@ def check_isdir(input_dir: str) -> str:
 def check_is_nii_exist(input_file_path: str) -> str:
     """
     Check if a directory exist.
+
     :param input_file_path: string of the path of the nii or nii.gz.
     :return: string if exist, else raise Error.
     """
@@ -44,6 +46,7 @@ def safe_file_name(file_name: str) -> str:
     """
     Remove any potentially dangerous or confusing characters from
     the file name by mapping them to reasonable substitutes.
+
     :param file_name: name of the file.
     :return: name of the file corrected.
     """
@@ -59,6 +62,7 @@ def safe_file_name(file_name: str) -> str:
 def split_filename(file_name: str) -> Tuple[str, str, str]:
     """
     Split file_name into folder path name, basename, and extension name.
+
     :param file_name: full path
     :return: path name, basename, extension name
     """
@@ -81,7 +85,8 @@ def load_nifty_volume_as_array(input_path_file: str) -> Tuple[np.ndarray, Tuple[
     """
     Load nifty image into numpy array [z,y,x] axis order.
     The output array shape is like [Depth, Height, Width].
-    :param input_path_file: input path file, should be *.nii or *.nii.gz
+
+    :param input_path_file: input path file, should be '*.nii' or '*.nii.gz'
     :return: a numpy data array, (with header)
     """
     img = sitk.ReadImage(input_path_file)
@@ -95,6 +100,7 @@ def save_to_nii(im: np.ndarray, header: (tuple, tuple, tuple), output_dir: str, 
                 gzip: bool = True) -> None:
     """
     Save numpy array to nii.gz format to submit.
+
     :param im: array numpy
     :param header: header metadata (origin, spacing, direction).
     :param output_dir: Output directory.

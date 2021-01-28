@@ -27,7 +27,7 @@ class DataPreprocessing(ABC):
     """
     Class for data cBrainMRIPrePro input modalities as a dict:
 
-        - Bias field correction of modalities (n4_correction args) (optional).
+        - Bias field correction of modalities (optional).
         - resampling (optional).
         - Co-registration: If template is set to True. Register to reference to template and then register other
           modalities to reference. If template is set to False. Register to reference.
@@ -87,6 +87,13 @@ class DataPreprocessing(ABC):
                 - affine_transform: save affine transform of registration
                 - mask: save brain mask resulting of ss of reference
                 - ss: save all skull-stripped image
+
+    .. document private functions
+    .. automethod:: _run_normalize_z_score
+    .. automethod:: _run_resample_image
+    .. automethod:: _run_bias_field_correction
+    .. automethod:: _run_coregistration
+    .. automethod:: _run_skull_stripping
     """
 
     def __init__(self,
@@ -221,6 +228,12 @@ class DataPreprocessing(ABC):
 
     @staticmethod
     def save_image(img: ants.ANTsImage, output_filename: str) -> None:
+        """
+        Save an `ants.ANTsImage` using :func:`ants.image_write`
+
+        :param img: an ants.ANTsImage
+        :param output_filename: output filename path
+        """
         ants.image_write(image=img, filename=output_filename)
 
     def _save_transform(self, img: ants.ANTsTransform, filename: str, modality: str, step: str, save_folder: str,
@@ -230,6 +243,11 @@ class DataPreprocessing(ABC):
         ants.write_transform(transform=img, filename=output_filename)
 
     def _run_resample_image(self, img_dict: dict) -> None:
+        """
+        Run image resampling using :func:`ants.resample_image`
+
+        :param img_dict: image dict with key is an identifier and value the corresponding image path
+        """
         logger.info("Perform resampling")
         for mod, mod_path in img_dict.items():
             _, fnm, ext = split_filename(mod_path)
@@ -246,14 +264,29 @@ class DataPreprocessing(ABC):
             ants.image_write(image=img_resample, filename=output_filename)
 
     def _run_bias_field_correction(self, img_dict: Dict[str, str]) -> None:
+        """
+        Run n4 bias field correction using :func:`ants.n4_bias_field_correction`
+
+        .. note::
+            N4 includes a log transform, so we are be aware of negative values. The function will check range of image
+            intensities and rescale to positive if negative values.
+
+            0) get range of input image = [a,b]
+            1) rescale input image to be in a positive, e.g., [10 , 1000]
+            2) perform N4 on 1)
+            3) rescale image from 2) to be in [a,b]
+
+            See Also: `<https://github.com/ANTsX/ANTs/issues/822>`_
+
+        .. warning::
+            To reproduce behavior as in ANTs a mask equally weighting the entire image is supplied.
+            In ANTsPy when no mask is supplied, a mask is computed with the get_mask function. Function is based
+            on a mean threshold. Resulting head mask is very often filled with holes. Here we compute a real head
+            mask with no holes.
+
+        :param img_dict: image dict with key is an identifier and value the corresponding image path
+        """
         logger.info("Perform bias field correction")
-        # N4 includes a log transform, so be aware of negative values
-        # will check range of image intensities and rescale to positive if negative values
-        # 0) get range of input image = [a,b]
-        # 1) rescale input image to be in a positive, e.g., [10 , 1000]
-        # 2) perform N4 on 1)
-        # 3) rescale image from 2) to be in [a,b]
-        # https://github.com/ANTsX/ANTs/issues/822
         for mod_n4 in self.n4_correction:
             _, fnm, ext = split_filename(img_dict[mod_n4])
             output_filename = os.path.join(self.output_folder, "n4_correction",
@@ -268,10 +301,7 @@ class DataPreprocessing(ABC):
             img_array = img.numpy()
             img_array_scaled, min_, scale_ = min_max_scaling(input_array=img_array, scaling_range=(10, 1000))
             img = img.new_image_like(img_array_scaled)
-            # To reproduce behavior as in ANTs a mask equally weighting the entire image is supplied.
-            # In ANTsPy when no mask is supplied, a mask is computed with the get_mask function. Function is based
-            # on a mean threshold. Resulting head mask is very often filled with holes. Here we compute a real head
-            # mask with no holes.
+            # get head mask
             head_mask = get_mask(img_array)
             head_mask = img.new_image_like(head_mask).astype("float32")  # pass to float32 to be read by n4 function
             img_n4 = ants.n4_bias_field_correction(image=img, mask=head_mask, verbose=False)  # 2
@@ -281,8 +311,14 @@ class DataPreprocessing(ABC):
             ants.image_write(image=img_n4, filename=output_filename)
 
     def _run_coregistration(self, img_dict: Dict[str, str], reference: Dict[str, str]) -> None:
+        """
+        Run coregistration using :func:`ants.registration`.
+
+        :param img_dict: image dict with key is an identifier and value the corresponding image path
+        :param reference: reference dict with key is an identifier and value the corresponding image path.
+            Need to be a dict of length 1.
+        """
         logger.info("Perform coregistration")
-        # img_reference = ants.image_read(list(reference.values())[0])
         save_affine_transform = ["fwdtransforms", "invtransforms"]
         _, fnm_ref, ext_ref = split_filename(list(reference.values())[0])
 
@@ -365,6 +401,13 @@ class DataPreprocessing(ABC):
                                              modality=mod, step=transform, save_folder="affine_transform", ext=".mat")
 
     def _run_skull_stripping(self, img_dict: Dict[str, str], reference: Dict[str, str]) -> None:
+        """
+        Run skull stripping using :func:`run_hd_bet` from :class:`HD_BET`.
+
+        :param img_dict: image dict with key is an identifier and value the corresponding image path
+        :param reference: reference dict with key is an identifier and value the corresponding image path.
+            Need to be a dict of length 1.
+        """
         logger.info("Perform Skull Stripping using HD-BET")
         ref_path = list(reference.values())[0]
         _, fnm_ref, ext_ref = split_filename(ref_path)
@@ -403,6 +446,14 @@ class DataPreprocessing(ABC):
                         filename=filename_mod, mode="image", gzip=True)
 
     def _run_normalize_z_score(self, img_dict: Dict[str, str]) -> None:
+        """
+        Run z-score normalization in brain.
+
+        .. math::
+            I_{\text{z-score}}(\mathbf x) = \dfrac{I(\mathbf x) - \mu}{\sigma}.
+
+        :param img_dict: image dict with key is an identifier and value the corresponding image path
+        """
         logger.info("Perform z-score normalization")
         for mod_normalize in self.normalize_z_score:
             _, fnm, ext = split_filename(img_dict[mod_normalize])
@@ -441,7 +492,9 @@ class DataPreprocessing(ABC):
         return file_array, file_header
 
     def run_pipeline(self):
-
+        """
+        Main function to run :class:`DataPreprocessing`
+        """
         self._create_folders_step()
 
         step_dict, reference_dict, step, folder_path = {}, {}, "", {}
@@ -506,27 +559,3 @@ class DataPreprocessing(ABC):
             for step_to_remove in remove_step:
                 shutil.rmtree(path=os.path.join(self.output_folder, step_to_remove), ignore_errors=True)
 
-
-if __name__ == "__main__":
-    import time
-
-    start = time.time()
-    preprocess = DataPreprocessing(
-        dict_image={"t1": "t1.nii.gz",
-                    "t1ce": "t1ce.nii.gz",
-                    "flair": "flair.nii.gz",
-                    "ct": "ct.nii.gz"},
-        reference={"t1": "t1.nii.gz"},
-        output_folder="/output_test",
-        resample_spacing=None,
-        n4_correction=["t1", "t1ce", "flair"],
-        inter_type_resample=4,
-        inter_type_apply_transform_registration=4,
-        template=True,
-        do_coregistration=True,
-        do_ss=True,
-        normalize_z_score=["t1", "t1ce", "flair"],
-        device="0", overwrite=True,
-    )
-    preprocess.run_pipeline()
-    print(f"total run time is {start - time.time()}")

@@ -350,7 +350,7 @@ class DataPreprocessing(ABC):
             if os.path.exists(output_filename) and all(check_affine_transform_save) and not self.overwrite:
                 logger.warning(f"Already exist and not overwrite, So pass ... {output_filename}")
                 continue
-            logger.info(f"Process: {output_filename_ref}")
+            logger.info(f"Process: {output_filename}")
             fixed_image = ants.image_read(output_filename_ref)
             moving_image = ants.image_read(mod_path)
             reg = ants.registration(fixed=fixed_image, moving=moving_image, type_of_transform='Affine')

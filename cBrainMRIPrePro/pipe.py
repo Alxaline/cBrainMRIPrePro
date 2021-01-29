@@ -450,7 +450,7 @@ class DataPreprocessing(ABC):
         Run z-score normalization in brain.
 
         .. math::
-            I_{\text{z-score}}(\mathbf x) = \dfrac{I(\mathbf x) - \mu}{\sigma}.
+            I_{z-score}(\mathbf x) = \dfrac{I(\mathbf x) - \mu}{\sigma}.
 
         :param img_dict: image dict with key is an identifier and value the corresponding image path
         """

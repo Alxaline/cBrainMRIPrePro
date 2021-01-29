@@ -267,7 +267,7 @@ class DataPreprocessing(ABC):
         """
         Run n4 bias field correction using :func:`ants.n4_bias_field_correction`
 
-        .. note::
+        .. warning::
             N4 includes a log transform, so we are be aware of negative values. The function will check range of image
             intensities and rescale to positive if negative values.
 
@@ -278,11 +278,11 @@ class DataPreprocessing(ABC):
 
             See Also: `<https://github.com/ANTsX/ANTs/issues/822>`_
 
-        .. warning::
+        .. note::
             To reproduce behavior as in ANTs a mask equally weighting the entire image is supplied.
             In ANTsPy when no mask is supplied, a mask is computed with the get_mask function. Function is based
-            on a mean threshold. Resulting head mask is very often filled with holes. Here we compute a real head
-            mask with no holes.
+            on a mean threshold. Resulting head mask is very often filled with holes.
+            Here we compute a real head mask with no holes with the :py:func:`.utils.image_processing.get_mask`
 
         :param img_dict: image dict with key is an identifier and value the corresponding image path
         """

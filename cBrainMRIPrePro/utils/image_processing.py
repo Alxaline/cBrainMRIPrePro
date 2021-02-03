@@ -15,6 +15,25 @@ logger = logging.getLogger(__name__)
 logging.getLogger('numba').setLevel(logging.WARNING)
 
 
+def _handle_zeros_in_scale(scale, copy=True):
+    """
+    Makes sure that whenever scale is zero, we handle it correctly.
+    This happens in most scalers when we have constant features.
+    """
+
+    # if we are fitting on 1D arrays, scale might be a scalar
+    if np.isscalar(scale):
+        if scale == .0:
+            scale = 1.
+        return scale
+    elif isinstance(scale, np.ndarray):
+        if copy:
+            # New array to avoid side-effects
+            scale = scale.copy()
+        scale[scale == 0.0] = 1.0
+        return scale
+
+
 @njit(parallel=True)
 def fill_mask(mask_arr: np.ndarray) -> np.ndarray:
     """
@@ -78,8 +97,9 @@ def min_max_scaling(input_array: np.ndarray, scaling_range: Tuple[int, int] = (1
     :return: image_scaled, min, scale
     """
     image_scaled = np.copy(input_array).astype(np.float32)
-    min_ = (scaling_range[0] - np.min(input_array)).astype(np.float32)
-    scale_ = ((scaling_range[1] - scaling_range[0]) / (np.max(input_array) - np.min(input_array))).astype(np.float32)
+    scale_ = ((scaling_range[1] - scaling_range[0]) / _handle_zeros_in_scale(
+        np.max(input_array) - np.min(input_array))).astype(np.float32)
+    min_ = scaling_range[0] - np.min(input_array) * scale_
     image_scaled *= scale_
     image_scaled += min_
     return image_scaled, min_, scale_

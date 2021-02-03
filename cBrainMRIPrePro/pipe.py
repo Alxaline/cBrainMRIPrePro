@@ -25,6 +25,9 @@ logger = logging.getLogger(__name__)
 
 class DataPreprocessing(ABC):
     """
+    The provided pipeline offer the possibility to resample image spacing, bias field correct, co-register
+    (in SRI24 template or in a reference modality), skull-stripped, and z-score normalize.
+
     Class for data cBrainMRIPrePro input modalities as a dict:
 
         - Bias field correction of modalities (optional).

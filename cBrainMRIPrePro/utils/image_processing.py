@@ -114,6 +114,7 @@ def invert_min_max_scaling(input_array_scaled: np.ndarray, scale_: float, min_: 
     :param min_: Per pixels/voxels minimum seen in the data
     :return: input image array unscaled
     """
+    input_array_scaled = np.copy(input_array_scaled).astype(np.float32)
     input_array_scaled -= min_
     input_array_scaled /= scale_
     return input_array_scaled

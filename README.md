@@ -81,7 +81,7 @@ Tree is as follows:
 │   │   ├── filename_n4_invtransforms_t1.mat
 │   │   └── filename_n4_invtransforms_t2.mat
 │   ├── coregistration
-│   │   ├── filename_n4_reference_t2.nii.gz
+│   │   ├── filename_n4_reference_t1.nii.gz
 │   │   ├── filename_n4_register_flair.nii.gz
 │   │   ├── filename_n4_register_t1ce.nii.gz
 │   │   ├── filename_n4_register_t1.nii.gz
@@ -97,7 +97,7 @@ Tree is as follows:
 │   │   ├── filename_n4_register_ss_normalize_t1.nii.gz
 │   │   └── filename_n4_register_ss_normalize_t2.nii.gz
 │   └── skullstripping
-│       ├── filename_n4_register_brain_mask_t2.nii.gz
+│       ├── filename_n4_register_brain_mask_t1.nii.gz
 │       ├── filename_n4_register_ss_flair.nii.gz
 │       ├── filename_n4_register_ss_t1ce.nii.gz
 │       ├── filename_n4_register_ss_t1.nii.gz

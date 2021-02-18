@@ -63,7 +63,10 @@ preprocess = DataPreprocessing(dict_image={"t1": "/path/t1.nii.gz",
                                device="0", overwrite=True,
                                )
 ```
-
+Then:
+```
+preprocess.run_pipeline()
+```
 The output folder will contain five folders nammed `affine_transform`, `coregistration`, `n4_correction`, 
 `normalize` and `affine_transform` respectively containing version of files with the current preprocess step.
 

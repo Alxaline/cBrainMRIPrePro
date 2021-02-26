@@ -10,6 +10,7 @@ import re
 import shutil
 from abc import ABC
 from typing import List, Tuple, Dict, Optional, Union
+from scipy import ndimage
 
 import ants
 import numpy as np
@@ -432,7 +433,12 @@ class DataPreprocessing(ABC):
             os.rename(src=os.path.join(self.output_folder, "skullstripping", fnm_ref + "_ss" + "_mask" + ext_ref),
                       dst=new_filename_mask)
 
-        mask_array, _ = load_nifty_volume_as_array(input_path_file=new_filename_mask)
+        # Fill if still hole in hd-bet mask (sometimes ventricles are not included)
+        mask_array, mask_header = load_nifty_volume_as_array(input_path_file=new_filename_mask)
+        mask_array = ndimage.binary_fill_holes(mask_array)
+        save_to_nii(im=mask_array, header=mask_header, output_dir=os.path.dirname(new_filename_mask),
+                    filename=os.path.basename(new_filename_mask), mode="label")
+
         for mod, mod_path in img_dict.items():  # loose some seconds because skull-strip reference again
             _, fnm, ext = split_filename(mod_path)
             filename_mod = self.check_output_filename(filename=fnm, modality=mod, step="ss") + ext_ref

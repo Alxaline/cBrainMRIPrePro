@@ -217,16 +217,16 @@ class DataPreprocessing(ABC):
         Returns: list of steps order
         """
         possibles_steps = OrderedDict({"reorient": self.reorient_image,
-                                       "resample_spacing": self.resample_spacing,
                                        "n4_correction": self.n4_correction,
+                                       "resample": self.resample_spacing,
                                        "coregistration": self.do_coregistration,
                                        "skullstripping": self.do_ss,
                                        "normalize": self.normalize_z_score
                                        })
 
         correspondance_folder_file = {"reorient": "reorient",
-                                      "resample_spacing": "resample",
                                       "n4_correction": "n4",
+                                      "resample": "resample",
                                       "coregistration": "register",
                                       "skullstripping": "ss",
                                       "normalize": "normalize"}
@@ -238,11 +238,18 @@ class DataPreprocessing(ABC):
         return filtered_steps
 
     def _get_step_dict_from_current_step(self, original_img_dict: Dict[str, str], current_step: str):
+        """
+        get step dict from current step
 
+        :param original_img_dict: image dict with key is an identifier and value the corresponding image path
+        :param current_step: current step of preprocessing
+        :return: updated image dict
+        """
         if current_step not in self.step_order:
             raise ValueError(f"current_step {current_step} is not recognize in {list(self.step_order.keys())}")
-
         name_step = list(self.step_order.values())[:list(self.step_order.keys()).index(current_step)]
+        name_folder = list(self.step_order.keys())[
+                               list(self.step_order.keys()).index(current_step) - 1]
         if name_step:
             name_step = "_".join(name_step)
             step_dict = {}
@@ -252,7 +259,9 @@ class DataPreprocessing(ABC):
                 if "n4" in name_step and mod not in self.n4_correction:
                     name_step = name_step.replace("n4", "")
                 fnm_step = self.check_output_filename(fnm, mod, name_step)
-                step_dict[mod] = os.path.join(self.output_folder, fnm_step + ext)
+                step_dict[mod] = os.path.join(self.output_folder, name_folder,
+                                              fnm_step + ext)
+            return step_dict
         else:
             return original_img_dict
 
@@ -372,6 +381,7 @@ class DataPreprocessing(ABC):
                                            self.check_output_filename(filename=fnm,
                                                                       modality=mod_n4,
                                                                       step="n4") + ext)
+
             if os.path.exists(output_filename) and not self.overwrite:
                 logger.warning(f"Already exist and not overwrite, So pass ... {output_filename}")
                 continue
@@ -595,7 +605,7 @@ class DataPreprocessing(ABC):
 
         if self.resample_spacing:
             self._run_resample_image(
-                img_dict=self._get_step_dict_from_current_step(self.dict_image, current_step="resample_spacing"))
+                img_dict=self._get_step_dict_from_current_step(self.dict_image, current_step="resample"))
 
         if self.do_coregistration:
             step_dict = self._get_step_dict_from_current_step(self.dict_image, current_step="coregistration")

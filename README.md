@@ -59,7 +59,7 @@ preprocess = DataPreprocessing(dict_image={"t1": "/path/t1.nii.gz",
                                do_ss=True,
                                normalize_z_score=["t1", "t1ce", "t2", "flair"],
                                save_step=("resample", "n4_correction", "coregistration", "affine_transform", 
-                                          "skullstripping", "normalize")
+                                          "skullstripping", "normalize"),
                                device="0", overwrite=True,
                                )
 ```

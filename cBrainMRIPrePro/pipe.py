@@ -10,7 +10,7 @@ import re
 import shutil
 from abc import ABC
 from collections import OrderedDict
-from typing import List, Tuple, Dict, Optional, Union
+from typing import List, Tuple, Dict, Optional, Union, Sequence
 
 import ants
 import numpy as np
@@ -121,13 +121,13 @@ class DataPreprocessing(ABC):
                  scaling_factor_z_score: int = 1,
                  device: str = "0",
                  overwrite: bool = False,
-                 save_step: Union[Tuple[str], List[str]] = ("reorient",
-                                                            "resample",
-                                                            "n4_correction",
-                                                            "coregistration",
-                                                            "affine_transform",
-                                                            "skullstripping",
-                                                            "normalize"),
+                 save_step: Sequence[str] = ("reorient",
+                                             "resample",
+                                             "n4_correction",
+                                             "coregistration",
+                                             "affine_transform",
+                                             "skullstripping",
+                                             "normalize"),
                  ) -> None:
 
         self.dict_image = dict_image
@@ -280,7 +280,7 @@ class DataPreprocessing(ABC):
         # create intermediate folder
         folders_steps = list(self._get_steps_order().keys())
         folders_steps.extend(["affine_transform"]) if (
-                    "affine_transform" in self.save_step and self.do_coregistration) else folders_steps
+                "affine_transform" in self.save_step and self.do_coregistration) else folders_steps
         for folder in folders_steps:
             if not os.path.exists(os.path.join(self.output_folder, folder)):
                 os.makedirs(os.path.join(self.output_folder, folder), exist_ok=True)

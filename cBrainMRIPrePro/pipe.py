@@ -49,6 +49,9 @@ class DataPreprocessing(ABC):
         reference: reference modality (used for co-registration and ss). if reference is not in dict_image,
             no cBrainMRIPrePro step is applied, except for coregistration.
         output_folder: output directory were to save cBrainMRIPrePro data
+        reorient_image: str for Reorient an image. For possible reorientation see
+            `<https://antspy.readthedocs.io/en/latest/_modules/ants/registration/reorient_image.html>`_
+            default is None.
         resample_spacing: resolution for resampling (ie (1, 1, 1) in mm
         inter_type_resample: mode for resample 0 (Linear), 1 (NearestNeighbor), 2 (Gaussian), 3 (WindowedSinc),
             4 (BSpline), default: 4
@@ -104,6 +107,7 @@ class DataPreprocessing(ABC):
                  dict_image: Dict[str, str],
                  reference: Dict[str, str],
                  output_folder: str,
+                 reorient_image: Optional[str] = None,
                  resample_spacing: Optional[Tuple[int, int, int]] = None,
                  inter_type_resample: int = 4,
                  n4_correction: Optional[List] = None,
@@ -116,15 +120,19 @@ class DataPreprocessing(ABC):
                  scaling_factor_z_score: int = 1,
                  device: str = "0",
                  overwrite: bool = False,
-                 save_step: Union[Tuple[str], List[str]] = (
-                         "resample", "n4_correction", "coregistration", "affine_transform", "skullstripping",
-                         "normalize"),
-
+                 save_step: Union[Tuple[str], List[str]] = ("reorient",
+                                                            "resample",
+                                                            "n4_correction",
+                                                            "coregistration",
+                                                            "affine_transform",
+                                                            "skullstripping",
+                                                            "normalize"),
                  ) -> None:
 
         self.dict_image = dict_image
         self.reference = reference
         self.output_folder = output_folder
+        self.reorient_image = reorient_image
         self.resample_spacing = resample_spacing
         self.inter_type_resample = inter_type_resample
         self.inter_type_apply_transform_registration = inter_type_apply_transform_registration
@@ -150,6 +158,10 @@ class DataPreprocessing(ABC):
 
         assert len(self.reference) == 1, "Reference must be unique and contains a key representing modality and " \
                                          "a value corresponding to the path"
+
+        if self.reorient_image:
+            assert self.reorient_image in ants.get_possible_orientations(), f"Possible orientation for reorientation" \
+                                                                            f" are {ants.get_possible_orientations()}"
 
         if self.resample_spacing:
             assert len(self.resample_spacing) == 3, f"Resample spacing need to contains 3 values," \
@@ -245,6 +257,26 @@ class DataPreprocessing(ABC):
         filename = self.check_output_filename(filename=filename, modality=modality, step=step)
         output_filename = os.path.join(self.output_folder, save_folder, f"{filename}{ext}")
         ants.write_transform(transform=img, filename=output_filename)
+
+    def _run_reorient_image(self, img_dict: dict) -> None:
+        """
+        Run image reorientation using :func:`ants.reorient_image2`
+
+        :param img_dict: image dict with key is an identifier and value the corresponding image path
+        """
+        logger.info("Perform reorientation")
+        for mod, mod_path in img_dict.items():
+            _, fnm, ext = split_filename(mod_path)
+            output_filename = os.path.join(self.output_folder, "reorient",
+                                           self.check_output_filename(filename=fnm,
+                                                                      modality=mod,
+                                                                      step="reorient") + ext)
+            if os.path.exists(output_filename) and not self.overwrite:
+                logger.warning(f"Already exist and not overwrite, So pass ... {output_filename}")
+                continue
+            logger.info(f"Process: {output_filename}")
+            img_reorient = ants.reorient_image2(image=ants.image_read(mod_path), orientation=self.reorient_image)
+            ants.image_write(image=img_reorient, filename=output_filename)
 
     def _run_resample_image(self, img_dict: dict) -> None:
         """
@@ -507,6 +539,9 @@ class DataPreprocessing(ABC):
         self._create_folders_step()
 
         step_dict, reference_dict, step, folder_path = {}, {}, "", {}
+
+        if self.reorient_image:
+            self._run_reorient_image(img_dict=self.dict_image)
 
         if self.n4_correction:
             self._run_bias_field_correction(img_dict=self.dict_image)

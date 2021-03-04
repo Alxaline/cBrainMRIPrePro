@@ -260,7 +260,7 @@ class DataPreprocessing(ABC):
             raise ValueError(f"current_step {current_step} is not recognize in {list(self.step_order.keys())}")
         name_step = list(self.step_order.values())[:list(self.step_order.keys()).index(current_step)]
         name_folder = list(self.step_order.keys())[
-                               list(self.step_order.keys()).index(current_step) - 1]
+            list(self.step_order.keys()).index(current_step) - 1]
         if name_step:
             name_step = "_".join(name_step)
             step_dict = {}
@@ -279,7 +279,8 @@ class DataPreprocessing(ABC):
     def _create_folders_steps(self) -> None:
         # create intermediate folder
         folders_steps = list(self._get_steps_order().keys())
-        folders_steps.extend(["affine_transform"]) if "affine_transform" in self.save_step else folders_steps
+        folders_steps.extend(["affine_transform"]) if (
+                    "affine_transform" in self.save_step and self.do_coregistration) else folders_steps
         for folder in folders_steps:
             if not os.path.exists(os.path.join(self.output_folder, folder)):
                 os.makedirs(os.path.join(self.output_folder, folder), exist_ok=True)

@@ -9,13 +9,14 @@ import os
 import re
 import shutil
 from abc import ABC
+from collections import OrderedDict
 from typing import List, Tuple, Dict, Optional, Union
-from scipy import ndimage
 
 import ants
 import numpy as np
 import torch
 from HD_BET.run import run_hd_bet
+from scipy import ndimage
 
 from cBrainMRIPrePro import utils
 from .utils.files import safe_file_name, split_filename, load_nifty_volume_as_array, save_to_nii
@@ -186,8 +187,8 @@ class DataPreprocessing(ABC):
                                                                          f" {self.default_type_of_transform}"
 
         if do_ss:
-            assert do_coregistration, "if do_ss is set to True, do_coregistration need to be set to true to have a " \
-                                      "reference to apply brain mask on possible others modalities in dict_image"
+            if not do_coregistration:
+                assert len(dict_image) == 1, "if not do_coregistration, you need to only pass one image to dict_image"
 
         for saving_step in self.save_step:
             assert saving_step in self.default_step, f"{save_step} must be in {self.default_step}"
@@ -209,16 +210,57 @@ class DataPreprocessing(ABC):
 
         self.device = int(device) if torch.cuda.is_available() else "cpu"
 
-    def _create_folders_step(self) -> None:
+    def _get_steps_order(self) -> Dict[str, str]:
+        """
+        get steps order
+
+        Returns: list of steps order
+        """
+        possibles_steps = OrderedDict({"reorient": self.reorient_image,
+                                       "resample_spacing": self.resample_spacing,
+                                       "n4_correction": self.n4_correction,
+                                       "coregistration": self.do_coregistration,
+                                       "skullstripping": self.do_ss,
+                                       "normalize": self.normalize_z_score
+                                       })
+
+        correspondance_folder_file = {"reorient": "reorient",
+                                      "resample_spacing": "resample",
+                                      "n4_correction": "n4",
+                                      "coregistration": "register",
+                                      "skullstripping": "ss",
+                                      "normalize": "normalize"}
+
+        filtered_steps = OrderedDict(
+            {k: cv for (k, v), (ck, cv) in zip(possibles_steps.items(), correspondance_folder_file.items()) if v})
+
+        self.step_order = filtered_steps
+        return filtered_steps
+
+    def _get_step_dict_from_current_step(self, original_img_dict: Dict[str, str], current_step: str):
+
+        if current_step not in self.step_order:
+            raise ValueError(f"current_step {current_step} is not recognize in {list(self.step_order.keys())}")
+
+        name_step = list(self.step_order.values())[:list(self.step_order.keys()).index(current_step)]
+        if name_step:
+            name_step = "_".join(name_step)
+            step_dict = {}
+            for mod, mod_path in original_img_dict.items():
+                pth, fnm, ext = split_filename(mod_path)
+                # n4 is specific to mod, so check
+                if "n4" in name_step and mod not in self.n4_correction:
+                    name_step = name_step.replace("n4", "")
+                fnm_step = self.check_output_filename(fnm, mod, name_step)
+                step_dict[mod] = os.path.join(self.output_folder, fnm_step + ext)
+        else:
+            return original_img_dict
+
+    def _create_folders_steps(self) -> None:
         # create intermediate folder
-        folders_step = []
-        folders_step.extend(["resample"]) if self.resample_spacing else folders_step
-        folders_step.extend(["n4_correction"]) if self.n4_correction else folders_step
-        folders_step.extend(["coregistration"]) if self.do_coregistration else folders_step
-        folders_step.extend(["affine_transform"]) if "affine_transform" in self.save_step else folders_step
-        folders_step.extend(["skullstripping"]) if self.do_ss else folders_step
-        folders_step.extend(["normalize"]) if self.normalize_z_score else folders_step
-        for folder in folders_step:
+        folders_steps = list(self._get_steps_order().keys())
+        folders_steps.extend(["affine_transform"]) if "affine_transform" in self.save_step else folders_steps
+        for folder in folders_steps:
             if not os.path.exists(os.path.join(self.output_folder, folder)):
                 os.makedirs(os.path.join(self.output_folder, folder), exist_ok=True)
 
@@ -258,7 +300,7 @@ class DataPreprocessing(ABC):
         output_filename = os.path.join(self.output_folder, save_folder, f"{filename}{ext}")
         ants.write_transform(transform=img, filename=output_filename)
 
-    def _run_reorient_image(self, img_dict: dict) -> None:
+    def _run_reorient_image(self, img_dict: Dict[str, str]) -> None:
         """
         Run image reorientation using :func:`ants.reorient_image2`
 
@@ -278,7 +320,7 @@ class DataPreprocessing(ABC):
             img_reorient = ants.reorient_image2(image=ants.image_read(mod_path), orientation=self.reorient_image)
             ants.image_write(image=img_reorient, filename=output_filename)
 
-    def _run_resample_image(self, img_dict: dict) -> None:
+    def _run_resample_image(self, img_dict: Dict[str, str]) -> None:
         """
         Run image resampling using :func:`ants.resample_image`
 
@@ -295,7 +337,8 @@ class DataPreprocessing(ABC):
                 logger.warning(f"Already exist and not overwrite, So pass ... {output_filename}")
                 continue
             logger.info(f"Process: {output_filename}")
-            img_resample = ants.resample_image(image=ants.image_read(mod_path), resample_params=self.resample_spacing,
+            img_resample = ants.resample_image(image=ants.image_read(mod_path),
+                                               resample_params=self.resample_spacing,
                                                interp_type=self.inter_type_resample)
             ants.image_write(image=img_resample, filename=output_filename)
 
@@ -434,7 +477,8 @@ class DataPreprocessing(ABC):
                 for transform in reg:
                     if transform in save_affine_transform:
                         self._save_transform(img=ants.read_transform(reg[transform][0]), filename=fnm,
-                                             modality=mod, step=transform, save_folder="affine_transform", ext=".mat")
+                                             modality=mod, step=transform, save_folder="affine_transform",
+                                             ext=".mat")
 
     def _run_skull_stripping(self, img_dict: Dict[str, str], reference: Dict[str, str]) -> None:
         """
@@ -508,7 +552,8 @@ class DataPreprocessing(ABC):
             logger.info(f"Process: {output_filename}")
             img = ants.image_read(img_dict[mod_normalize])
             img_array = img.numpy()
-            img_array_normalize = zscore_normalize(input_array=img_array, scaling_factor=self.scaling_factor_z_score)
+            img_array_normalize = zscore_normalize(input_array=img_array,
+                                                   scaling_factor=self.scaling_factor_z_score)
             img = img.new_image_like(img_array_normalize)
             ants.image_write(image=img, filename=output_filename)
 
@@ -536,70 +581,48 @@ class DataPreprocessing(ABC):
         """
         Main function to run :class:`DataPreprocessing`
         """
-        self._create_folders_step()
+        self._create_folders_steps()
 
         step_dict, reference_dict, step, folder_path = {}, {}, "", {}
 
         if self.reorient_image:
-            self._run_reorient_image(img_dict=self.dict_image)
+            self._run_reorient_image(
+                img_dict=self._get_step_dict_from_current_step(self.dict_image, current_step="reorient"))
 
         if self.n4_correction:
-            self._run_bias_field_correction(img_dict=self.dict_image)
+            self._run_bias_field_correction(
+                img_dict=self._get_step_dict_from_current_step(self.dict_image, current_step="n4_correction"))
 
         if self.resample_spacing:
-            step_dict = {k: os.path.join(self.output_folder, "n4_correction",
-                                         self.check_output_filename(filename=split_filename(v)[1],
-                                                                    modality=k,
-                                                                    step="n4") +
-                                         split_filename(v)[2]) if k in self.n4_correction else v for k, v in
-                         self.dict_image.items()}
-            self._run_resample_image(img_dict=step_dict)
+            self._run_resample_image(
+                img_dict=self._get_step_dict_from_current_step(self.dict_image, current_step="resample_spacing"))
 
         if self.do_coregistration:
-            if self.resample_spacing and self.n4_correction:
-                step = {k: "n4_resample" if k in self.n4_correction else "resample" for k in self.dict_image}
-                folder_path = {
-                    k: os.path.join(self.output_folder, "resample") for k in self.dict_image}
-            elif self.resample_spacing:
-                step = {k: "resample" for k in self.dict_image}
-                folder_path = {k: os.path.join(self.output_folder, "resample") for k in self.dict_image}
-            elif self.n4_correction:
-                step = {k: "n4" if k in self.n4_correction else "" for k in self.dict_image}
-                folder_path = {k: os.path.join(self.output_folder,
-                                               "n4_correction") if k in self.n4_correction else os.path.dirname(v) for
-                               k, v in self.dict_image.items()}
-            step_dict = {k: os.path.join(folder_path[k],
-                                         self.check_output_filename(filename=split_filename(v)[1], modality=k,
-                                                                    step=step[k]) +
-                                         split_filename(v)[2]) for k, v in self.dict_image.items()} if \
-                (self.resample_spacing or self.n4_correction) else copy.deepcopy(self.dict_image)
+            step_dict = self._get_step_dict_from_current_step(self.dict_image, current_step="coregistration")
             reference_dict = {list(self.reference.keys())[0]: step_dict[list(self.reference.keys())[0]]} if \
                 list(self.reference.values())[0] in self.dict_image.values() else copy.deepcopy(self.reference)
             self._run_coregistration(img_dict=step_dict, reference=reference_dict)
 
         if self.do_ss:
-            step_dict = {k: os.path.join(self.output_folder, "coregistration",
-                                         self.check_output_filename(filename=split_filename(v)[1], modality=k,
-                                                                    step="register") +
-                                         split_filename(v)[2]) for k, v in step_dict.items()}
-            reference_dict = {
-                k: os.path.join(self.output_folder, "coregistration",
-                                self.check_output_filename(filename=split_filename(v)[1], modality=k,
-                                                           step="register") +
-                                split_filename(v)[2]) for k, v in reference_dict.items()}
+            step_dict = self._get_step_dict_from_current_step(self.dict_image, current_step="skullstripping")
+
+            if self.do_coregistration:
+                reference_dict = {
+                    k: os.path.join(self.output_folder, "coregistration",
+                                    self.check_output_filename(filename=split_filename(v)[1], modality=k,
+                                                               step="register") +
+                                    split_filename(v)[2]) for k, v in reference_dict.items()}
+            else:
+                reference_dict = step_dict
 
             self._run_skull_stripping(img_dict=step_dict, reference=reference_dict)
 
         if self.normalize_z_score:
-            step_dict = {k: os.path.join(self.output_folder, "skullstripping",
-                                         self.check_output_filename(filename=split_filename(v)[1], modality=k,
-                                                                    step="ss") +
-                                         split_filename(v)[2]) for k, v in step_dict.items()}
-            self._run_normalize_z_score(img_dict=step_dict)
+            self._run_normalize_z_score(
+                img_dict=self._get_step_dict_from_current_step(self.dict_image, current_step="normalize"))
 
         # if step to remove
         remove_step = set(self.save_step).symmetric_difference(set(self.default_step))
         if remove_step:
             for step_to_remove in remove_step:
                 shutil.rmtree(path=os.path.join(self.output_folder, step_to_remove), ignore_errors=True)
-

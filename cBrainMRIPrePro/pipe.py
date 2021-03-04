@@ -147,12 +147,23 @@ class DataPreprocessing(ABC):
         self.device = device
         self.overwrite = overwrite
         self.save_step = list(save_step)
-        self.default_step = (
-            "resample", "n4_correction", "coregistration", "affine_transform", "skullstripping", "normalize")
-        self.default_inter_type_apply_transform_registration = {0: "linear", 1: "nearestNeighbor", 2: "multiLabel",
-                                                                3: "gaussian", 4: "bSpline", 5: "cosineWindowedSinc",
-                                                                6: "welchWindowedSinc", 7: "hammingWindowedSinc",
-                                                                8: "lanczosWindowedSinc", 9: "genericLabel"}
+        self.default_step = ("reorient",
+                             "resample",
+                             "n4_correction",
+                             "coregistration",
+                             "affine_transform",
+                             "skullstripping",
+                             "normalize")
+        self.default_inter_type_apply_transform_registration = {0: "linear",
+                                                                1: "nearestNeighbor",
+                                                                2: "multiLabel",
+                                                                3: "gaussian",
+                                                                4: "bSpline",
+                                                                5: "cosineWindowedSinc",
+                                                                6: "welchWindowedSinc",
+                                                                7: "hammingWindowedSinc",
+                                                                8: "lanczosWindowedSinc",
+                                                                9: "genericLabel"}
 
         self.default_type_of_transform = ["Translation", "Rigid", "Similarity", "QuickRigid", "DenseRigid", "BOLDRigid",
                                           "Affine", "AffineFast", "BOLDAffine", "TRSAA"]
@@ -191,7 +202,7 @@ class DataPreprocessing(ABC):
                 assert len(dict_image) == 1, "if not do_coregistration, you need to only pass one image to dict_image"
 
         for saving_step in self.save_step:
-            assert saving_step in self.default_step, f"{save_step} must be in {self.default_step}"
+            assert saving_step in self.default_step, f"{saving_step} must be in {self.default_step}"
 
         if len(self.save_step) < 1:
             logger.warning("You don't save any step")

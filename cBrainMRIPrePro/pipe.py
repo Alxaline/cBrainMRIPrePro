@@ -220,6 +220,7 @@ class DataPreprocessing(ABC):
                                          "spgr_unstrip_lps.nii.gz")
 
         self.device = int(device) if torch.cuda.is_available() else "cpu"
+        self.brain_mask = None
 
     def _get_steps_order(self) -> Dict[str, str]:
         """
@@ -519,6 +520,8 @@ class DataPreprocessing(ABC):
                                                    modality=list(reference.keys())[0],
                                                    step="brain_mask") + ext_ref
         new_filename_mask = os.path.join(self.output_folder, "skullstripping", filename_mask)
+        self.brain_mask = new_filename_mask
+
         if os.path.exists(new_filename_mask) and not self.overwrite:
             logger.warning(f"Already exist and not overwrite, So pass ... {new_filename_mask}")
             pass
@@ -575,7 +578,8 @@ class DataPreprocessing(ABC):
             img = ants.image_read(img_dict[mod_normalize])
             img_array = img.numpy()
             img_array_normalize = zscore_normalize(input_array=img_array,
-                                                   scaling_factor=self.scaling_factor_z_score)
+                                                   scaling_factor=self.scaling_factor_z_score,
+                                                   mask=self.brain_mask)
             img = img.new_image_like(img_array_normalize)
             ants.image_write(image=img, filename=output_filename)
 

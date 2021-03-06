@@ -4,8 +4,8 @@
 | Created on: Nov 23, 2020
 """
 import logging
-from typing import Tuple
-
+from typing import Tuple, Union, Optional
+from cBrainMRIPrePro.utils.files import load_nifty_volume_as_array
 import numpy as np
 from numba import njit, prange
 from skimage.filters import threshold_otsu
@@ -120,7 +120,8 @@ def invert_min_max_scaling(input_array_scaled: np.ndarray, scale_: float, min_: 
     return input_array_scaled
 
 
-def zscore_normalize(input_array: np.ndarray, scaling_factor: int = 1, mask: np.ndarray = None):
+def zscore_normalize(input_array: Union[np.ndarray, str], scaling_factor: int = 1,
+                     mask: Optional[Union[np.ndarray, str]] = None) -> np.ndarray:
     """
     Function to normalize array with Z-Score. Normalize a target image by subtracting the mean of the whole brain
     and dividing by the standard deviation.
@@ -130,8 +131,15 @@ def zscore_normalize(input_array: np.ndarray, scaling_factor: int = 1, mask: np.
     :param mask: input mask where to apply the normalization. If not provided default will be in non zero value
     :return: input array normalize
     """
+
+    if isinstance(input_array, str):
+        input_array, _ = load_nifty_volume_as_array(input_array)
+
     if mask is None:
         mask = input_array > 0
+    elif isinstance(mask, str):
+        mask, _ = load_nifty_volume_as_array(mask)
+
     logical_mask = mask == 1  # force the mask to be logical type
     mean = input_array[logical_mask].mean()
     std = input_array[logical_mask].std()

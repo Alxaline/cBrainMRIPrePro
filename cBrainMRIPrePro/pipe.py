@@ -579,8 +579,8 @@ class DataPreprocessing(ABC):
             img_array = img.numpy()
             img_array_normalize = zscore_normalize(input_array=img_array,
                                                    scaling_factor=self.scaling_factor_z_score,
-                                                   mask=ants.image_read(
-                                                       self.brain_mask).numpy() if self.brain_mask else self.brain_mask)
+                                                   mask=None)  # don't use self.brain_mask because if image has a crop
+            # will take a lot of background in normalization
             img = img.new_image_like(img_array_normalize)
             ants.image_write(image=img, filename=output_filename)
 

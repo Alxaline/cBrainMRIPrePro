@@ -5,7 +5,7 @@
 """
 import logging
 from typing import Tuple, Union, Optional
-from cBrainMRIPrePro.utils.files import load_nifty_volume_as_array
+
 import numpy as np
 from numba import njit, prange
 from skimage.filters import threshold_otsu
@@ -132,14 +132,8 @@ def zscore_normalize(input_array: Union[np.ndarray, str], scaling_factor: int = 
     :return: input array normalize
     """
 
-    if isinstance(input_array, str):
-        input_array, _ = load_nifty_volume_as_array(input_array)
-
     if mask is None:
         mask = input_array > 0
-    elif isinstance(mask, str):
-        mask, _ = load_nifty_volume_as_array(mask)
-
     logical_mask = mask == 1  # force the mask to be logical type
     mean = input_array[logical_mask].mean()
     std = input_array[logical_mask].std()

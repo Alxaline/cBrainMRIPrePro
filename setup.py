@@ -14,7 +14,7 @@ with open('LICENSE') as f:
 
 args = dict(
     name='cBrainMRIPrePro',
-    version='0.0.1',
+    version='0.1',
     description="Conventional Brain Magnetic Resonance Images Pre-Processing for NIfTI files",
     long_description=readme,
     author='Alexandre CARRE',

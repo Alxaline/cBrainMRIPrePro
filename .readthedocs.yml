@@ -2,7 +2,6 @@ version: 2
 
 build:
   apt_packages:
-    - libclang
     - cmake
 
 python:

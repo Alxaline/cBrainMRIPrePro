@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-| Author: Alexandre CARRE (alexandre.carre@gustaveroussy.fr)
+| Author: Alexandre CARRE 
 | Created on: Nov 23, 2020
 """
 import logging

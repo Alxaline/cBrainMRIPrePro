@@ -19,7 +19,7 @@ sphinx-apidoc -f -o source ../cBrainMRIPrePro
 ### 3) Then to build the html or LaTeX version: 
 ```
 cd docs
-make html or make latexpdf
+make clean html or make latexpdf
 ```
 The html will be available within the folder [docs/build/html](docs/build/html/index.html).
 The pdf will be available within the folder [docs/build/latex](docs/build/latex/cBrainMRIPrePro.pdf).

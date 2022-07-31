@@ -1,5 +1,5 @@
-Sphinx==3.4.3
-sphinx-rtd-theme==0.5.1
+Sphinx==5.1.1
+sphinx-rtd-theme==1.0.0
 recommonmark
 sphinxcontrib-applehelp
 sphinxcontrib-devhelp
@@ -7,4 +7,4 @@ sphinxcontrib-htmlhelp
 sphinxcontrib-jsmath
 sphinxcontrib-qthelp
 sphinxcontrib-serializinghtml
-sphinx-autodoc-typehints==1.11.1
+sphinx-autodoc-typehints

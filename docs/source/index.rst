@@ -10,8 +10,8 @@ Welcome to cBrainMRIPrePro's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   cBrainMRIPrePro
-
+   introduction
+   Python API <modules.rst>
 
 
 Indices and tables

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Author: Alexandre CARRE (alexandre.carre@gustaveroussy.fr)
+Author: Alexandre CARRE 
 Created on: Nov 23, 2020
 """
 
 from setuptools import setup, find_packages
 
-with open('README.md') as f:
+with open('README.rst') as f:
     readme = f.read()
 
 with open('LICENSE') as f:
@@ -18,7 +18,6 @@ args = dict(
     description="Conventional Brain Magnetic Resonance Images Pre-Processing for NIfTI files",
     long_description=readme,
     author='Alexandre CARRE',
-    author_email='alexandre.carre@gustaveroussy.fr',
     url='https://github.com/Alxaline/cBrainMRIPrePro',
     license=license,
     packages=find_packages(exclude=['docs']),

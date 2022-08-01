@@ -34,7 +34,7 @@ setup(install_requires=['torch',
                         'numba',
                         'argparse',
                         'numpy',
-                        'antspyx'
+                        'antspyx',
                         # 'antspyx @ git+https://github.com/ANTsX/ANTsPy.git@v0.2.6#egg=antspyx',
                         'HD-BET @ git+https://github.com/MIC-DKFZ/HD-BET.git#egg=HD-BET',
                         ], **args)

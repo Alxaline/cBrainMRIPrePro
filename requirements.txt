@@ -5,6 +5,7 @@ numba>=0.52.0
 argparse>=1.4.0
 setuptools>=50.3.1
 numpy>=1.19.4
-git+https://github.com/ANTsX/ANTsPy.git@v0.2.6
+antspyx~=0.3.3
+# git+https://github.com/ANTsX/ANTsPy.git@v0.2.6
 git+https://github.com/MIC-DKFZ/HD-BET.git
 
